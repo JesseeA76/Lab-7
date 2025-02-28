@@ -7,18 +7,14 @@ import pickle
 try:
     from sklearn.model_selection import train_test_split
     from sklearn.linear_model import LinearRegression
-except ImportError:
-    st.error("❌ Scikit-learn is not installed. Please run: pip install scikit-learn")
-    st.stop()
+
 
 # Load dataset
 def load_data():
     try:
         df = pd.read_csv("AmesHousing.xlsx.csv")  # Make sure the CSV file is in the same directory
         return df
-    except Exception as e:
-        st.error(f"❌ Error loading dataset: {e}")
-        return None
+    
 
 df = load_data()
 
