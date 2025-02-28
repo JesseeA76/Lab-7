@@ -1,58 +1,68 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import pickle
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+import openpyxl
 
-# Try importing scikit-learn (if it fails, prompt the user to install it)
-try:
-    from sklearn.model_selection import train_test_split
-    from sklearn.linear_model import LinearRegression
+# Load the dataset
+file_path = "AmesHousing.xlsx"
+df = pd.read_excel(file_path)
 
+# Select relevant features and target variable (modify based on dataset columns)
+selected_features = ['Overall Qual', 'Gr Liv Area', 'Garage Cars', 'Total Bsmt SF', 'Full Bath', 'Year Built']
+target = 'SalePrice'
 
-# Load dataset
-def load_data():
-    try:
-        df = pd.read_csv("AmesHousing.xlsx.csv")  # Make sure the CSV file is in the same directory
-        return df
-    
+df = df[selected_features + [target]].dropna()
 
-df = load_data()
+# Split the data into features (X) and target (y)
+X = df[selected_features]
+y = df[target]
 
-if df is not None:
-    # Select important features
-    features = ['LotArea', 'YearBuilt', 'TotalBsmtSF', 'GrLivArea']
-    
-    # Remove missing values
-    df = df[features + ['SalePrice']].dropna()
+# Split into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Split dataset
-    X = df[features]
-    y = df['SalePrice']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
 
-    # Train model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+# Evaluate the model
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
 
-    # Save model
-    with open("model.pkl", "wb") as f:
-        pickle.dump(model, f)
+# Create the Streamlit web app
+st.title('Ames Housing Price Prediction')
 
-    # Streamlit UI
-    st.title("🏡 Ames Housing Price Predictor")
+# Sidebar for user inputs
+st.sidebar.header('Input House Features')
 
-    # Input fields
-    lot_area = st.number_input("Lot Area", min_value=500, value=7500, step=100)
-    year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000, step=1)
-    total_bsmt_sf = st.number_input("Total Basement SF", min_value=0, value=1000, step=50)
-    gr_liv_area = st.number_input("Above Ground Living Area SF", min_value=500, value=1500, step=50)
+def user_input_features():
+    Overall_Qual = st.sidebar.slider('Overall Quality', 1, 10, 5)
+    Gr_Liv_Area = st.sidebar.slider('Above Ground Living Area (sq ft)', 500, 5000, 1500)
+    Garage_Cars = st.sidebar.slider('Garage Cars', 0, 4, 2)
+    Total_Bsmt_SF = st.sidebar.slider('Total Basement Size (sq ft)', 0, 3000, 1000)
+    Full_Bath = st.sidebar.slider('Full Bathrooms', 0, 4, 2)
+    Year_Built = st.sidebar.slider('Year Built', 1800, 2023, 2000)
+   
+    data = {
+        'Overall Qual': Overall_Qual,
+        'Gr Liv Area': Gr_Liv_Area,
+        'Garage Cars': Garage_Cars,
+        'Total Bsmt SF': Total_Bsmt_SF,
+        'Full Bath': Full_Bath,
+        'Year Built': Year_Built
+    }
+    return pd.DataFrame(data, index=[0])
 
-    # Predict button
-    if st.button("Predict Price"):
-        with open("model.pkl", "rb") as f:
-            loaded_model = pickle.load(f)
+input_df = user_input_features()
 
-        input_data = np.array([[lot_area, year_built, total_bsmt_sf, gr_liv_area]])
-        prediction = loaded_model.predict(input_data)
+# Display user inputs
+st.subheader('User Input Parameters')
+st.write(input_df)
 
-        st.success(f"🏠 Estimated House Price: **${prediction[0]:,.2f}**")
+# Predict the house price
+prediction = model.predict(input_df)
+
+# Display the prediction
+st.subheader('Predicted House Price ($)')
+st.write(f"${prediction[0]:,.2f}")
