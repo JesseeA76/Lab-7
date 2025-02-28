@@ -6,51 +6,40 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 
 # Load dataset
-def load_data():
-    try:
-        df = pd.read_csv("AmesHousing.xlsx.csv")  # Ensure this file is in the same folder
-        return df
-    except Exception as e:
-        st.error(f"Error loading dataset: {e}")
-        return None
+df = pd.read_csv("AmesHousing.xlsx.csv")  # Make sure this file is in the same directory
 
-df = load_data()
+# Select features
+features = ['LotArea', 'YearBuilt', 'TotalBsmtSF', 'GrLivArea']
+df = df[features + ['SalePrice']].dropna()
 
-if df is not None:
-    # Select relevant features
-    features = ['LotArea', 'YearBuilt', 'TotalBsmtSF', 'GrLivArea']
-    df = df[features + ['SalePrice']].dropna()  # Remove missing values
+# Split dataset
+X = df[features]
+y = df['SalePrice']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Define X (features) and y (target)
-    X = df[features]
-    y = df['SalePrice']
+# Train model
+model = LinearRegression()
+model.fit(X_train, y_train)
 
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Save model
+with open("model.pkl", "wb") as f:
+    pickle.dump(model, f)
 
-    # Train model
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+# Streamlit UI
+st.title("🏡 Ames Housing Price Predictor")
 
-    # Save trained model
-    with open("model.pkl", "wb") as f:
-        pickle.dump(model, f)
+# User inputs
+lot_area = st.number_input("Lot Area", value=7500, step=100)
+year_built = st.number_input("Year Built", value=2000, step=1)
+total_bsmt_sf = st.number_input("Total Basement SF", value=1000, step=50)
+gr_liv_area = st.number_input("Above Ground Living Area SF", value=1500, step=50)
 
-    # Streamlit UI
-    st.title("🏡 Ames Housing Price Predictor")
+# Predict price
+if st.button("Predict Price"):
+    with open("model.pkl", "rb") as f:
+        model = pickle.load(f)
 
-    # User input
-    lot_area = st.number_input("Lot Area", min_value=500, value=7500, step=100)
-    year_built = st.number_input("Year Built", min_value=1800, max_value=2025, value=2000, step=1)
-    total_bsmt_sf = st.number_input("Total Basement SF", min_value=0, value=1000, step=50)
-    gr_liv_area = st.number_input("Above Ground Living Area SF", min_value=500, value=1500, step=50)
+    input_data = np.array([[lot_area, year_built, total_bsmt_sf, gr_liv_area]])
+    prediction = model.predict(input_data)
 
-    # Predict price
-    if st.button("Predict Price"):
-        with open("model.pkl", "rb") as f:
-            loaded_model = pickle.load(f)
-
-        input_data = np.array([[lot_area, year_built, total_bsmt_sf, gr_liv_area]])
-        prediction = loaded_model.predict(input_data)
-
-        st.success(f"🏠 Estimated House Price: **${prediction[0]:,.2f}**")
+    st.success(f"🏠 Estimated House Price: **${prediction[0]:,.2f}**")
